@@ -1,22 +1,18 @@
-import { useState, useEffect } from 'react'
-import { nanoid } from 'nanoid';
-
-import styles from './my-contacts.module.css'
+import { useSelector, useDispatch } from 'react-redux';
 
 import MyContactForm from './MyContactForm/MyContactForm';
 import MyContactList from './MyContactList/MyContactList';
 import Filter from './Filter/Filter';
 
-const MyContacts = () => {
-    const [contacts, setContacts] = useState(() => {
-        const data = JSON.parse(localStorage.getItem("my-contacts"));
-        return data || [];
-    });
-    const [filter, setFilter] = useState("");
+import { addContact, deleteContact } from '../../redux/contacts/contacts-slice';
+import { setFilter } from '../../redux/filter/filter-slice';
+import { getFilteredContacts } from '../../redux/contacts/constants-selectors';
 
-    useEffect(() => {
-        localStorage.setItem("my-contacts", JSON.stringify(contacts));
-    }, [contacts]);
+import styles from './my-contacts.module.css'
+
+const MyContacts = () => {
+    const contacts = useSelector(getFilteredContacts);
+    const dispatch = useDispatch();
 
     const isDublicate = ({ name, number }) => {
         const normalizedName = name.toLowerCase();
@@ -31,54 +27,29 @@ const MyContacts = () => {
         return Boolean(dublicate);
     };
 
-    const addContact = (data) => {
-        
+    const onAddContact = (data) => {        
         if (isDublicate(data)) {
             return alert(`${data.name} or Number: ${data.number} is already in contacts.`)
         }
         
-        setContacts(prevContacts => {
-            const newContact = {
-                id: nanoid(),
-                ...data,
-            };
-
-            return [...prevContacts, newContact];
-        })
+        const action = addContact(data);
+        dispatch(action);
     };
 
-    const deleteContact = (id) => {
-        setContacts(prevContacts => prevContacts.filter(item => item.id !== id))
+    const onDeleteContact = (id) => {
+        dispatch(deleteContact(id));
     };
 
-    const changeFilter = ({ target }) => setFilter(target.value);
-
-    const getFilterdContacts = () => {
-        if (!filter) {
-            return contacts;
-        }
-
-        const normalizedFilter = filter.toLowerCase();
-
-        const filteredContacts = contacts.filter(({ name, number }) => {
-            const normalizedName = name.toLowerCase();
-
-            return (normalizedName.includes(normalizedFilter) || number.includes(normalizedFilter))
-        })
-
-        return filteredContacts;
-    };
-
-    const items = getFilterdContacts();
-
+    const changeFilter = ({ target }) => dispatch(setFilter(target.value));
+    
     return (
         <div className={styles.wrapper}>
             <h1>Phonebook</h1>
-            <MyContactForm onSubmit={addContact} />
+            <MyContactForm onSubmit={onAddContact} />
             <div className={styles.listwrapper}>
                 <h2>Contacts</h2>
                 <Filter onChange={changeFilter} />
-                <MyContactList items={items} deleteContact={deleteContact} />
+                <MyContactList items={contacts} deleteContact={onDeleteContact} />
             </div>
         </div>
     );
